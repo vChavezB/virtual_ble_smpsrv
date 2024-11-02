@@ -70,6 +70,7 @@ jobs:
       - name: Run   
         run: | 
           source smp/.venv/bin/activate
+          chmod +x zephyr.exe
           sleep 5 && ./zephyr.exe --bt-dev=127.0.0.1:1234 &
           cd smp/examples/ble
           python3 helloworld.py
