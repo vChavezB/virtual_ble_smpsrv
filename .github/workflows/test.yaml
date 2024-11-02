@@ -1,0 +1,79 @@
+# Copyright (c) 2024, Victor Chavez (vchavezb@protonmail.com)
+# SPDX-License-Identifier: Apache-2.0
+
+name: Build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+
+  build:
+    runs-on: ubuntu-22.04
+    container: ghcr.io/zephyrproject-rtos/ci:v0.26.2
+    env:
+      CMAKE_PREFIX_PATH: /opt/toolchains
+      ZEPHYR_VERSION: 3.7.0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Initialize
+        run: |
+          cd /tmp/
+          west init --mr v$ZEPHYR_VERSION
+          west update -o=--depth=1 -n
+
+      - name: Build Posix
+        working-directory: /tmp/
+        run: |
+          west build /tmp/zephyr/samples/subsys/mgmt/mcumgr/smp_svr -b native_posix_64 \
+          --build-dir $GITHUB_WORKSPACE/build \
+          -DEXTRA_CONF_FILE=overlay-bt.conf \
+          -DCONFIG_MCUMGR_TRANSPORT_NETBUF_USER_DATA_SIZE=100 \
+          -DCONFIG_BT_HCI_ACL_FLOW_CONTROL=n \
+          -DCONFIG_MCUMGR_GRP_SHELL=y \
+          -DCONFIG_MCUMGR_GRP_IMG=n \
+          -DCONFIG_BOOTLOADER_MCUBOOT=n
+
+      - name : Upload Firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: zephyr-build
+          path: |
+            build/zephyr/zephyr.exe
+
+  test:
+    needs: build
+    runs-on: ubuntu-22.04
+    env:
+      BLEAK_BUMBLE: Hello
+    steps: 
+      - name: Download zephyr binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: zephyr-build
+      - name: Clone repository
+        uses: actions/checkout@v4
+        with:
+          repository: 'intercreate/smpclient'
+          path: smp
+
+      - name : Install smpclient deps
+        run: |
+          cd smp
+          pip3 install poetry
+          poetry install
+          source .venv/bin/activate
+          pip3 uninstall bleak -y
+          pip3 install git+https://github.com/vChavezB/bleak.git@bumble
+      - name: Run   
+        run: | 
+          source smp/.venv/bin/activate
+          sleep 5 && ./zephyr.exe --bt-dev=127.0.0.1:1234 &
+          cd smp/examples/ble
+          python3 helloworld.py
+          
+
+      
+
