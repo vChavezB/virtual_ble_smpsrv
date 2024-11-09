@@ -67,6 +67,7 @@ jobs:
           source .venv/bin/activate
           pip3 uninstall bleak -y
           pip3 install "bleak[bumble] @ git+https://github.com/vChavezB/bleak.git@bumble"
+          pip3 install bumble
       - name: Run   
         run: | 
           source smp/.venv/bin/activate
