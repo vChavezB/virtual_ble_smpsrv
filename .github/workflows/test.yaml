@@ -47,7 +47,7 @@ jobs:
     needs: build
     runs-on: ubuntu-22.04
     env:
-      BLEAK_BUMBLE: Hello
+      BLEAK_BUMBLE: "tcp-server:_:1234"
     steps: 
       - name: Download zephyr binaries
         uses: actions/download-artifact@v4
